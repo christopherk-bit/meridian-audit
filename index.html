@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Operations Audit — Meridian</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── TOKENS ─── */
+    :root {
+      --obsidian:    #0E0F11;
+      --carbon:      #1C1E22;
+      --slate:       #2D3139;
+      --bone:        #F5F0E8;
+      --mist:        #9BA3AF;
+      --amber:       #C9963A;
+      --amber-hover: #DBA840;
+      --navy:        #3A4A5C;
+      --success-bg:  #142214;
+      --success-txt: #6DBF6D;
+      --error-bg:    #221414;
+      --error-txt:   #BF6D6D;
+      --f-display:   'Cormorant SC', serif;
+      --f-body:      'Jost', sans-serif;
+      --f-mono:      'Courier Prime', monospace;
+    }
+
+    /* ─── RESET ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      background: var(--obsidian);
+      color: var(--bone);
+      font-family: var(--f-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+    }
+
+    /* ─── PROGRESS BAR ─── */
+    #progress-bar-track {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--slate);
+      z-index: 100;
+    }
+    #progress-bar-fill {
+      height: 100%;
+      background: var(--amber);
+      border-radius: 0 2px 2px 0;
+      transition: width 400ms cubic-bezier(0,0,0.2,1);
+      width: 0%;
+    }
+
+    /* ─── HEADER ─── */
+    .site-header {
+      width: 100%;
+      max-width: 620px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 0 32px;
+    }
+    .wordmark {
+      font-family: var(--f-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--bone);
+      letter-spacing: 0.06em;
+    }
+    .stage-badge {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--amber);
+      text-transform: uppercase;
+    }
+
+    /* ─── CARD ─── */
+    .card {
+      background: var(--carbon);
+      border: 1px solid var(--slate);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 620px;
+      overflow: hidden;
+    }
+
+    /* ─── CARD HEADER ─── */
+    .card-header {
+      background: var(--obsidian);
+      padding: 28px 32px 24px;
+      border-bottom: 1px solid var(--slate);
+    }
+    .card-header-label {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: 0.24em;
+      color: var(--amber);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .card-header-title {
+      font-family: var(--f-display);
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--bone);
+      margin-bottom: 8px;
+    }
+    .card-header-desc {
+      font-family: var(--f-body);
+      font-size: 13px;
+      color: var(--mist);
+      line-height: 1.7;
+    }
+
+    /* ─── CARD BODY ─── */
+    .card-body { padding: 32px; }
+
+    /* ─── QUESTION BLOCK ─── */
+    .q-block { margin-bottom: 24px; }
+    .q-block:last-of-type { margin-bottom: 0; }
+
+    .q-label {
+      font-family: var(--f-body);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--mist);
+      display: block;
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+    .q-label .req { color: var(--amber); margin-left: 2px; }
+
+    .q-hint {
+      font-family: var(--f-body);
+      font-size: 11px;
+      color: var(--mist);
+      opacity: 0.7;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    /* ─── SECTION DIVIDER ─── */
+    .section-divider {
+      margin: 32px 0 28px;
+      border: none;
+      border-top: 1px solid var(--slate);
+      position: relative;
+    }
+    .section-divider-label {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: 0.24em;
+      color: var(--amber);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    /* ─── INPUTS ─── */
+    textarea, input[type="text"], input[type="email"], input[type="tel"], input[type="number"] {
+      background: var(--obsidian);
+      border: 1px solid var(--slate);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-family: var(--f-body);
+      font-size: 13px;
+      color: var(--bone);
+      width: 100%;
+      outline: none;
+      resize: none;
+      transition: border-color 200ms ease-out;
+      -webkit-appearance: none;
+    }
+    textarea::placeholder, input::placeholder { color: var(--mist); opacity: 0.55; }
+    textarea:focus, input:focus { border-color: var(--amber); }
+    textarea.filled, input.filled { border-color: var(--amber); }
+
+    /* ─── PILL BUTTONS (single select) ─── */
+    .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill {
+      background: var(--obsidian);
+      color: var(--mist);
+      border: 1px solid var(--slate);
+      border-radius: 5px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-family: var(--f-body);
+      font-size: 12px;
+      font-weight: 400;
+      transition: all 150ms ease-out;
+      user-select: none;
+      line-height: 1;
+    }
+    .pill:hover { border-color: var(--mist); color: var(--bone); }
+    .pill.selected {
+      background: var(--amber);
+      color: var(--obsidian);
+      border-color: var(--amber);
+      font-weight: 600;
+    }
+
+    /* ─── RADIO ─── */
+    .radio-group { display: flex; flex-direction: column; gap: 10px; }
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .radio-circle {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1.5px solid var(--slate);
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 150ms ease-out;
+    }
+    .radio-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--obsidian);
+      display: none;
+    }
+    .radio-option.selected .radio-circle {
+      border-color: var(--amber);
+      background: var(--amber);
+    }
+    .radio-option.selected .radio-dot { display: block; }
+    .radio-option.selected .radio-label { color: var(--bone); }
+    .radio-label {
+      font-family: var(--f-body);
+      font-size: 13px;
+      color: var(--mist);
+      transition: color 150ms;
+    }
+
+    /* ─── CHECKBOX ─── */
+    .check-group { display: flex; flex-direction: column; gap: 10px; }
+    .check-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .check-box {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      border: 1.5px solid var(--slate);
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 150ms ease-out;
+    }
+    .check-option.selected .check-box {
+      border-color: var(--amber);
+      background: var(--amber);
+    }
+    .check-option.selected .check-label { color: var(--bone); }
+    .check-label {
+      font-family: var(--f-body);
+      font-size: 13px;
+      color: var(--mist);
+      line-height: 1.4;
+      transition: color 150ms;
+    }
+    /* checkmark svg inline */
+    .check-mark {
+      display: none;
+      width: 10px;
+      height: 10px;
+    }
+    .check-option.selected .check-mark { display: block; }
+
+    /* ─── SCALE INPUT ─── */
+    .scale-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .scale-btn {
+      width: 40px;
+      height: 40px;
+      background: var(--obsidian);
+      border: 1px solid var(--slate);
+      border-radius: 5px;
+      color: var(--mist);
+      font-family: var(--f-mono);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 150ms ease-out;
+    }
+    .scale-btn:hover { border-color: var(--mist); color: var(--bone); }
+    .scale-btn.selected {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: var(--obsidian);
+      font-weight: 700;
+    }
+
+    /* ─── DEPARTMENT BLOCK ─── */
+    .dept-block {
+      background: var(--obsidian);
+      border: 1px solid var(--slate);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .dept-block-label {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--mist);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .dept-conditional {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--slate);
+      display: none;
+    }
+    .dept-conditional.visible { display: block; }
+    .dept-conditional .q-block { margin-bottom: 18px; }
+
+    /* ─── PROCESS BLOCK ─── */
+    .process-block {
+      background: var(--obsidian);
+      border: 1px solid var(--slate);
+      border-left: 3px solid var(--amber);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .process-block-label {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--amber);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .process-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 480px) {
+      .process-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ─── CTA BUTTON ─── */
+    .btn-primary {
+      background: var(--amber);
+      color: var(--obsidian);
+      border: none;
+      border-radius: 6px;
+      padding: 14px 28px;
+      font-family: var(--f-body);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: all 200ms cubic-bezier(0,0,0.2,1);
+      margin-top: 32px;
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover {
+      background: var(--amber-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(201,150,58,0.3);
+    }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* ─── FOOTER NOTE ─── */
+    .form-footer-note {
+      font-family: var(--f-body);
+      font-size: 11px;
+      color: var(--mist);
+      text-align: center;
+      margin-top: 12px;
+      line-height: 1.6;
+      opacity: 0.7;
+    }
+
+    /* ─── THANK YOU SCREEN ─── */
+    .thank-you {
+      text-align: center;
+      padding: 56px 32px;
+    }
+    .thank-you-icon {
+      margin: 0 auto 24px;
+      display: flex;
+      justify-content: center;
+    }
+    .thank-you-title {
+      font-family: var(--f-display);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--bone);
+      margin-bottom: 12px;
+    }
+    .thank-you-body {
+      font-family: var(--f-body);
+      font-size: 14px;
+      color: var(--mist);
+      line-height: 1.8;
+      max-width: 400px;
+      margin: 0 auto 28px;
+    }
+    .thank-you-meta {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      color: var(--amber);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    /* ─── VALIDATION ─── */
+    .field-error {
+      font-family: var(--f-body);
+      font-size: 11px;
+      color: var(--error-txt);
+      margin-top: 5px;
+      display: none;
+    }
+    .field-error.visible { display: block; }
+    textarea.error, input.error { border-color: var(--error-txt); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 520px) {
+      .card-body { padding: 24px 20px; }
+      .card-header { padding: 24px 20px 20px; }
+      .card-header-title { font-size: 20px; }
+    }
+
+    /* ─── SCROLL FADE ─── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .card { animation: fadeUp 400ms cubic-bezier(0,0,0.2,1) both; }
+
+    /* ─── STAGE SCREENS ─── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- PROGRESS BAR -->
+<div id="progress-bar-track">
+  <div id="progress-bar-fill"></div>
+</div>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="wordmark">MERIDIAN</div>
+  <div class="stage-badge" id="header-stage-badge">Stage 1 of 2</div>
+</header>
+
+<!-- ════════════════════════════════════════
+     STAGE 1 — PRE-QUALIFIER
+════════════════════════════════════════ -->
+<div class="screen active" id="screen-s1">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-label">AI Operations Audit — Stage One</div>
+      <div class="card-header-title">Is your business a fit?</div>
+      <p class="card-header-desc">Answer five quick questions and we'll tell you if your business qualifies for our AI savings analysis. Takes two minutes.</p>
+    </div>
+    <div class="card-body">
+
+      <!-- Q1 -->
+      <div class="q-block">
+        <label class="q-label">What is your company name and what do you do? <span class="req">*</span></label>
+        <textarea id="s1_q1" rows="3" placeholder="Example: Apex Manufacturing — we make custom industrial components for the automotive industry." oninput="onTextInput(this,'s1_q1')"></textarea>
+        <div class="field-error" id="err-s1_q1">This field is required.</div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="q-block">
+        <label class="q-label">How many full-time employees do you have? <span class="req">*</span></label>
+        <div class="pill-group" id="pills-s1_q2">
+          <button class="pill" onclick="selectPill('s1_q2',this,'1–10')">1–10</button>
+          <button class="pill" onclick="selectPill('s1_q2',this,'11–25')">11–25</button>
+          <button class="pill" onclick="selectPill('s1_q2',this,'26–50')">26–50</button>
+          <button class="pill" onclick="selectPill('s1_q2',this,'51–100')">51–100</button>
+          <button class="pill" onclick="selectPill('s1_q2',this,'101–250')">101–250</button>
+          <button class="pill" onclick="selectPill('s1_q2',this,'250+')">250+</button>
+        </div>
+        <div class="field-error" id="err-s1_q2">Please select an option.</div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="q-block">
+        <label class="q-label">What is your approximate annual revenue? <span class="req">*</span></label>
+        <div class="pill-group" id="pills-s1_q3">
+          <button class="pill" onclick="selectPill('s1_q3',this,'Under $1M')">Under $1M</button>
+          <button class="pill" onclick="selectPill('s1_q3',this,'$1M–$5M')">$1M–$5M</button>
+          <button class="pill" onclick="selectPill('s1_q3',this,'$5M–$25M')">$5M–$25M</button>
+          <button class="pill" onclick="selectPill('s1_q3',this,'$25M–$100M')">$25M–$100M</button>
+          <button class="pill" onclick="selectPill('s1_q3',this,'$100M+')">$100M+</button>
+        </div>
+        <div class="field-error" id="err-s1_q3">Please select an option.</div>
+      </div>
+
+      <!-- Q4 -->
+      <div class="q-block">
+        <label class="q-label">What is the single biggest operational problem costing you time or money right now? <span class="req">*</span></label>
+        <p class="q-hint">Be specific. The more detail you give, the better we can assess fit.</p>
+        <textarea id="s1_q4" rows="3" placeholder="Example: Our sales team manually copies lead data from our website form into Salesforce — takes 45 minutes per day and errors are constant." oninput="onTextInput(this,'s1_q4')"></textarea>
+        <div class="field-error" id="err-s1_q4">This field is required.</div>
+      </div>
+
+      <!-- Q5 -->
+      <div class="q-block">
+        <label class="q-label">If we identified a way to save or generate an additional $100,000 annually, would you invest $15,000–$25,000 to make that happen? <span class="req">*</span></label>
+        <div class="radio-group" id="radio-s1_q5">
+          <div class="radio-option" onclick="selectRadio('s1_q5',this,'Yes, if the ROI is clear')">
+            <div class="radio-circle"><div class="radio-dot"></div></div>
+            <span class="radio-label">Yes, if the ROI is clear</span>
+          </div>
+          <div class="radio-option" onclick="selectRadio('s1_q5',this,'Possibly, depends on the details')">
+            <div class="radio-circle"><div class="radio-dot"></div></div>
+            <span class="radio-label">Possibly, depends on the details</span>
+          </div>
+          <div class="radio-option" onclick="selectRadio('s1_q5',this,'Not right now')">
+            <div class="radio-circle"><div class="radio-dot"></div></div>
+            <span class="radio-label">Not right now</span>
+          </div>
+          <div class="radio-option" onclick="selectRadio('s1_q5',this,'Not sure')">
+            <div class="radio-circle"><div class="radio-dot"></div></div>
+            <span class="radio-label">Not sure</span>
+          </div>
+        </div>
+        <div class="field-error" id="err-s1_q5">Please select an option.</div>
+      </div>
+
+      <button class="btn-primary" onclick="submitStage1()">Submit — See If You Qualify →</button>
+      <p class="form-footer-note">We review every submission personally. You'll hear from us within 24 hours.</p>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     STAGE 1 — THANK YOU
+════════════════════════════════════════ -->
+<div class="screen" id="screen-s1-ty">
+  <div class="card">
+    <div class="thank-you">
+      <div class="thank-you-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#C9963A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <path d="M22 4L12 14.01l-3-3"/>
+        </svg>
+      </div>
+      <div class="thank-you-title">Thank you.</div>
+      <p class="thank-you-body">We are reviewing your answers and will be in touch within 24 hours with your Stage Two audit link if you are a fit. Sit tight — we'll reach out personally.</p>
+      <div class="thank-you-meta">Meridian · AI Workflow Intelligence</div>
+      <button onclick="goToStage2()" style="margin-top:28px;background:transparent;color:var(--amber);border:1px solid var(--amber);border-radius:6px;padding:10px 20px;font-family:var(--f-body);font-size:12px;cursor:pointer;transition:all 200ms ease-out;" onmouseover="this.style.background='rgba(201,150,58,0.08)'" onmouseout="this.style.background='transparent'">Preview Stage 2 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     STAGE 2 — FULL AUDIT
+════════════════════════════════════════ -->
+<div class="screen" id="screen-s2">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-label">AI Operations Audit — Stage Two</div>
+      <div class="card-header-title">Your Custom Findings Report</div>
+      <p class="card-header-desc">This audit takes about 10–15 minutes. Your answers power your custom findings report. Estimates are completely fine — do not overthink any answer.</p>
+    </div>
+    <div class="card-body">
+
+      <!-- ── BUSINESS SNAPSHOT ── -->
+      <div class="section-divider-label">01 — Business Snapshot</div>
+
+      <div class="q-block">
+        <label class="q-label">Who is filling out this survey and what is your role? <span class="req">*</span></label>
+        <input type="text" id="s2_q1" placeholder="Example: Jane Smith, COO" oninput="onTextInput(this,'s2_q1')" />
+        <div class="field-error" id="err-s2_q1">This field is required.</div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">On a scale of 1–10, how would you rate your company's current use of AI? <span class="req">*</span></label>
+        <p class="q-hint">1 = we haven't touched it &nbsp;·&nbsp; 10 = we're already building with it</p>
+        <div class="scale-group" id="scale-s2_q2">
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'1')">1</button>
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'2')">2</button>
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'3')">3</button>
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'4')">4</button>
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'5')">5</button>
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'6')">6</button>
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'7')">7</button>
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'8')">8</button>
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'9')">9</button>
+          <button class="scale-btn" onclick="selectScale('s2_q2',this,'10')">10</button>
+        </div>
+        <div class="field-error" id="err-s2_q2">Please select a value.</div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">If you could wave a magic wand and fix one thing in your business operations tomorrow, what would it be — and what would that make possible over the next 12 months? <span class="req">*</span></label>
+        <p class="q-hint">Example: We would be able to scale without hiring, our team would spend time on work that actually matters, and I would stop being the bottleneck in every process.</p>
+        <textarea id="s2_q3" rows="4" oninput="onTextInput(this,'s2_q3')"></textarea>
+        <div class="field-error" id="err-s2_q3">This field is required.</div>
+      </div>
+
+      <!-- ── SYSTEMS & INTEGRATION ── -->
+      <hr class="section-divider" />
+      <div class="section-divider-label">02 — Systems & Integration Map</div>
+
+      <div class="q-block">
+        <label class="q-label">List every software tool your team uses regularly across any department. <span class="req">*</span></label>
+        <p class="q-hint">Include CRM, email, project management, accounting, inventory, communication, marketing, HR — everything.</p>
+        <textarea id="s2_q4" rows="4" placeholder="Example: Salesforce, HubSpot, QuickBooks, Slack, Asana, Shopify, NetSuite, Excel..." oninput="onTextInput(this,'s2_q4')"></textarea>
+        <div class="field-error" id="err-s2_q4">This field is required.</div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">For each tool listed, does it automatically share data with your other tools, or does someone move information manually? <span class="req">*</span></label>
+        <p class="q-hint">List each tool and answer Yes, No, or Sometimes. Example: Salesforce to HubSpot — No, someone copies data manually.</p>
+        <textarea id="s2_q5" rows="4" oninput="onTextInput(this,'s2_q5')"></textarea>
+        <div class="field-error" id="err-s2_q5">This field is required.</div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Where does information most commonly get stuck, lost, or delayed as it moves through your business? <span class="req">*</span></label>
+        <textarea id="s2_q6" rows="3" oninput="onTextInput(this,'s2_q6')"></textarea>
+        <div class="field-error" id="err-s2_q6">This field is required.</div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">What does your team manually copy, paste, reformat, or re-enter on a regular basis? <span class="req">*</span></label>
+        <textarea id="s2_q7" rows="3" oninput="onTextInput(this,'s2_q7')"></textarea>
+        <div class="field-error" id="err-s2_q7">This field is required.</div>
+      </div>
+
+      <!-- ── DEPARTMENT WORKFLOW MAPPING ── -->
+      <hr class="section-divider" />
+      <div class="section-divider-label">03 — Department Workflow Mapping</div>
+      <p style="font-family:var(--f-body);font-size:12px;color:var(--mist);margin-bottom:24px;line-height:1.6;">For each department, indicate if it exists in your company. Additional questions will appear for active departments.</p>
+
+      <!-- MARKETING -->
+      <div class="dept-block">
+        <div class="dept-block-label">Marketing</div>
+        <div class="q-block" style="margin-bottom:0;">
+          <label class="q-label">Does your company have a Marketing function?</label>
+          <div class="pill-group">
+            <button class="pill" onclick="selectPill('s2_q8',this,'Yes');showDept('marketing-detail')">Yes</button>
+            <button class="pill" onclick="selectPill('s2_q8',this,'No');hideDept('marketing-detail')">No</button>
+          </div>
+        </div>
+        <div class="dept-conditional" id="marketing-detail">
+          <div class="q-block">
+            <label class="q-label">Who owns Marketing and how many people are in it?</label>
+            <input type="text" id="s2_q9" placeholder="Example: Sarah V., 3 people" oninput="onTextInput(this,'s2_q9')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Check every task your team does repeatedly:</label>
+            <div class="check-group" id="checks-s2_q10">
+              <div class="check-option" onclick="toggleCheck('s2_q10',this,'Writing or posting social media content')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Writing or posting social media content</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q10',this,'Creating email campaigns')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Creating email campaigns</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q10',this,'Building or updating landing pages')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Building or updating landing pages</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q10',this,'Generating reports on campaign performance')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Generating reports on campaign performance</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q10',this,'Responding to online reviews or comments')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Responding to online reviews or comments</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q10',this,'Creating proposals or sales collateral')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Creating proposals or sales collateral</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q10',this,'Managing ad campaigns')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Managing ad campaigns</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q10',this,'Other')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Other</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SALES -->
+      <div class="dept-block">
+        <div class="dept-block-label">Sales</div>
+        <div class="q-block" style="margin-bottom:0;">
+          <label class="q-label">Does your company have a Sales function?</label>
+          <div class="pill-group">
+            <button class="pill" onclick="selectPill('s2_q11',this,'Yes');showDept('sales-detail')">Yes</button>
+            <button class="pill" onclick="selectPill('s2_q11',this,'No');hideDept('sales-detail')">No</button>
+          </div>
+        </div>
+        <div class="dept-conditional" id="sales-detail">
+          <div class="q-block">
+            <label class="q-label">Who owns Sales and how many people are in it?</label>
+            <input type="text" id="s2_q12" placeholder="Example: Mike T., 5 reps" oninput="onTextInput(this,'s2_q12')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Check every task your team does repeatedly:</label>
+            <div class="check-group" id="checks-s2_q13">
+              <div class="check-option" onclick="toggleCheck('s2_q13',this,'Manually entering leads into a CRM')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Manually entering leads into a CRM</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q13',this,'Following up with prospects via email or phone')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Following up with prospects via email or phone</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q13',this,'Building proposals or quotes from scratch each time')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Building proposals or quotes from scratch each time</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q13',this,'Researching prospects before calls')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Researching prospects before calls</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q13',this,'Sending contracts or agreements')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Sending contracts or agreements</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q13',this,'Updating deal stages manually')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Updating deal stages manually</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q13',this,'Generating sales reports')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Generating sales reports</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q13',this,'Other')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Other</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUSTOMER SERVICE -->
+      <div class="dept-block">
+        <div class="dept-block-label">Customer Service</div>
+        <div class="q-block" style="margin-bottom:0;">
+          <label class="q-label">Does your company have a Customer Service function?</label>
+          <div class="pill-group">
+            <button class="pill" onclick="selectPill('s2_q14',this,'Yes');showDept('cs-detail')">Yes</button>
+            <button class="pill" onclick="selectPill('s2_q14',this,'No');hideDept('cs-detail')">No</button>
+          </div>
+        </div>
+        <div class="dept-conditional" id="cs-detail">
+          <div class="q-block">
+            <label class="q-label">Who owns Customer Service and how many people are in it?</label>
+            <input type="text" id="s2_q15" oninput="onTextInput(this,'s2_q15')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Check every task your team does repeatedly:</label>
+            <div class="check-group" id="checks-s2_q16">
+              <div class="check-option" onclick="toggleCheck('s2_q16',this,'Answering the same questions repeatedly')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Answering the same questions repeatedly</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q16',this,'Manually routing support tickets')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Manually routing support tickets</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q16',this,'Following up with customers on order status')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Following up with customers on order status</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q16',this,'Processing refunds or complaints')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Processing refunds or complaints</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q16',this,'Onboarding new customers step by step')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Onboarding new customers step by step</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q16',this,'Sending check-in or follow-up communications')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Sending check-in or follow-up communications</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q16',this,'Other')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Other</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OPERATIONS -->
+      <div class="dept-block">
+        <div class="dept-block-label">Operations / Fulfillment</div>
+        <div class="q-block" style="margin-bottom:0;">
+          <label class="q-label">Does your company have an Operations or Fulfillment function?</label>
+          <div class="pill-group">
+            <button class="pill" onclick="selectPill('s2_q17',this,'Yes');showDept('ops-detail')">Yes</button>
+            <button class="pill" onclick="selectPill('s2_q17',this,'No');hideDept('ops-detail')">No</button>
+          </div>
+        </div>
+        <div class="dept-conditional" id="ops-detail">
+          <div class="q-block">
+            <label class="q-label">Who owns Operations and how many people are in it?</label>
+            <input type="text" id="s2_q18" oninput="onTextInput(this,'s2_q18')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Check every task your team does repeatedly:</label>
+            <div class="check-group" id="checks-s2_q19">
+              <div class="check-option" onclick="toggleCheck('s2_q19',this,'Manually scheduling or dispatching')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Manually scheduling or dispatching</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q19',this,'Processing orders or invoices by hand')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Processing orders or invoices by hand</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q19',this,'Coordinating between vendors or suppliers')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Coordinating between vendors or suppliers</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q19',this,'Tracking inventory manually')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Tracking inventory manually</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q19',this,'Creating or updating SOPs and documentation')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Creating or updating SOPs and documentation</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q19',this,'Quality checking work before delivery')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Quality checking work before delivery</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q19',this,'Other')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Other</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FINANCE -->
+      <div class="dept-block">
+        <div class="dept-block-label">Finance / Admin</div>
+        <div class="q-block" style="margin-bottom:0;">
+          <label class="q-label">Does your company have a Finance or Admin function?</label>
+          <div class="pill-group">
+            <button class="pill" onclick="selectPill('s2_q20',this,'Yes');showDept('finance-detail')">Yes</button>
+            <button class="pill" onclick="selectPill('s2_q20',this,'No');hideDept('finance-detail')">No</button>
+          </div>
+        </div>
+        <div class="dept-conditional" id="finance-detail">
+          <div class="q-block">
+            <label class="q-label">Who owns Finance and how many people are in it?</label>
+            <input type="text" id="s2_q21" oninput="onTextInput(this,'s2_q21')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Check every task your team does repeatedly:</label>
+            <div class="check-group" id="checks-s2_q22">
+              <div class="check-option" onclick="toggleCheck('s2_q22',this,'Manual data entry into accounting software')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Manual data entry into accounting software</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q22',this,'Building financial reports by hand')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Building financial reports by hand</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q22',this,'Processing expense reports')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Processing expense reports</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q22',this,'Chasing invoices or following up on payments')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Chasing invoices or following up on payments</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q22',this,'Reconciling data between systems')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Reconciling data between systems</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q22',this,'Other')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Other</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HR -->
+      <div class="dept-block">
+        <div class="dept-block-label">HR / Recruiting</div>
+        <div class="q-block" style="margin-bottom:0;">
+          <label class="q-label">Does your company have an HR or Recruiting function?</label>
+          <div class="pill-group">
+            <button class="pill" onclick="selectPill('s2_q23',this,'Yes');showDept('hr-detail')">Yes</button>
+            <button class="pill" onclick="selectPill('s2_q23',this,'No');hideDept('hr-detail')">No</button>
+          </div>
+        </div>
+        <div class="dept-conditional" id="hr-detail">
+          <div class="q-block">
+            <label class="q-label">Who owns HR and how many people are in it?</label>
+            <input type="text" id="s2_q24" oninput="onTextInput(this,'s2_q24')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Check every task your team does repeatedly:</label>
+            <div class="check-group" id="checks-s2_q25">
+              <div class="check-option" onclick="toggleCheck('s2_q25',this,'Screening resumes manually')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Screening resumes manually</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q25',this,'Scheduling interviews by email back and forth')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Scheduling interviews by email back and forth</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q25',this,'Onboarding paperwork and training coordination')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Onboarding paperwork and training coordination</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q25',this,'Tracking time off or performance manually')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Tracking time off or performance manually</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q25',this,'Employee communications and announcements')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Employee communications and announcements</span>
+              </div>
+              <div class="check-option" onclick="toggleCheck('s2_q25',this,'Other')">
+                <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <span class="check-label">Other</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── QUANTIFICATION ── -->
+      <hr class="section-divider" />
+      <div class="section-divider-label">04 — Process Quantification</div>
+      <p style="font-family:var(--f-body);font-size:12px;color:var(--mist);margin-bottom:24px;line-height:1.6;">Tell us about your three most time-consuming manual processes. These fields power your ROI calculator. Rough estimates are fine.</p>
+
+      <!-- PROCESS 1 -->
+      <div class="process-block">
+        <div class="process-block-label">Process 01</div>
+        <div class="q-block">
+          <label class="q-label">Name or describe the process <span class="req">*</span></label>
+          <input type="text" id="s2_q26" placeholder="Example: Manual weekly inventory reconciliation" oninput="onTextInput(this,'s2_q26')" />
+          <div class="field-error" id="err-s2_q26">This field is required.</div>
+        </div>
+        <div class="process-grid">
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Time per occurrence <span class="req">*</span></label>
+            <input type="text" id="s2_q27" placeholder="Example: 2 hours" oninput="onTextInput(this,'s2_q27')" />
+            <div class="field-error" id="err-s2_q27">Required.</div>
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Times per week <span class="req">*</span></label>
+            <input type="number" id="s2_q28" placeholder="3" min="0" oninput="onTextInput(this,'s2_q28')" />
+            <div class="field-error" id="err-s2_q28">Required.</div>
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">People involved each time <span class="req">*</span></label>
+            <input type="number" id="s2_q29" placeholder="2" min="1" oninput="onTextInput(this,'s2_q29')" />
+            <div class="field-error" id="err-s2_q29">Required.</div>
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Hourly cost of people involved <span class="req">*</span></label>
+            <div class="pill-group" id="pills-s2_q30" style="flex-direction:column;">
+              <button class="pill" onclick="selectPill('s2_q30',this,'Under $25/hr')" style="text-align:left;">Under $25/hr</button>
+              <button class="pill" onclick="selectPill('s2_q30',this,'$25–$40/hr')" style="text-align:left;">$25–$40/hr</button>
+              <button class="pill" onclick="selectPill('s2_q30',this,'$40–$60/hr')" style="text-align:left;">$40–$60/hr</button>
+              <button class="pill" onclick="selectPill('s2_q30',this,'$60–$85/hr')" style="text-align:left;">$60–$85/hr</button>
+              <button class="pill" onclick="selectPill('s2_q30',this,'$85+/hr')" style="text-align:left;">$85+/hr</button>
+            </div>
+          </div>
+        </div>
+        <div class="q-block" style="margin-top:14px;margin-bottom:0;">
+          <label class="q-label">What does this process produce? What is the output?</label>
+          <input type="text" id="s2_q31" placeholder="Example: a report, a spreadsheet, a customer notification" oninput="onTextInput(this,'s2_q31')" />
+        </div>
+      </div>
+
+      <!-- PROCESS 2 -->
+      <div class="process-block">
+        <div class="process-block-label">Process 02</div>
+        <div class="q-block">
+          <label class="q-label">Name or describe the process</label>
+          <input type="text" id="s2_q32" oninput="onTextInput(this,'s2_q32')" />
+        </div>
+        <div class="process-grid">
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Time per occurrence</label>
+            <input type="text" id="s2_q33" placeholder="Example: 45 min" oninput="onTextInput(this,'s2_q33')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Times per week</label>
+            <input type="number" id="s2_q34" placeholder="5" min="0" oninput="onTextInput(this,'s2_q34')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">People involved each time</label>
+            <input type="number" id="s2_q35" placeholder="1" min="1" oninput="onTextInput(this,'s2_q35')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Hourly cost of people involved</label>
+            <div class="pill-group" id="pills-s2_q36" style="flex-direction:column;">
+              <button class="pill" onclick="selectPill('s2_q36',this,'Under $25/hr')" style="text-align:left;">Under $25/hr</button>
+              <button class="pill" onclick="selectPill('s2_q36',this,'$25–$40/hr')" style="text-align:left;">$25–$40/hr</button>
+              <button class="pill" onclick="selectPill('s2_q36',this,'$40–$60/hr')" style="text-align:left;">$40–$60/hr</button>
+              <button class="pill" onclick="selectPill('s2_q36',this,'$60–$85/hr')" style="text-align:left;">$60–$85/hr</button>
+              <button class="pill" onclick="selectPill('s2_q36',this,'$85+/hr')" style="text-align:left;">$85+/hr</button>
+            </div>
+          </div>
+        </div>
+        <div class="q-block" style="margin-top:14px;margin-bottom:0;">
+          <label class="q-label">What does this process produce?</label>
+          <input type="text" id="s2_q37" oninput="onTextInput(this,'s2_q37')" />
+        </div>
+      </div>
+
+      <!-- PROCESS 3 -->
+      <div class="process-block">
+        <div class="process-block-label">Process 03</div>
+        <div class="q-block">
+          <label class="q-label">Name or describe the process</label>
+          <input type="text" id="s2_q38" oninput="onTextInput(this,'s2_q38')" />
+        </div>
+        <div class="process-grid">
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Time per occurrence</label>
+            <input type="text" id="s2_q39" oninput="onTextInput(this,'s2_q39')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Times per week</label>
+            <input type="number" id="s2_q40" min="0" oninput="onTextInput(this,'s2_q40')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">People involved each time</label>
+            <input type="number" id="s2_q41" min="1" oninput="onTextInput(this,'s2_q41')" />
+          </div>
+          <div class="q-block" style="margin-bottom:0;">
+            <label class="q-label">Hourly cost of people involved</label>
+            <div class="pill-group" id="pills-s2_q42" style="flex-direction:column;">
+              <button class="pill" onclick="selectPill('s2_q42',this,'Under $25/hr')" style="text-align:left;">Under $25/hr</button>
+              <button class="pill" onclick="selectPill('s2_q42',this,'$25–$40/hr')" style="text-align:left;">$25–$40/hr</button>
+              <button class="pill" onclick="selectPill('s2_q42',this,'$40–$60/hr')" style="text-align:left;">$40–$60/hr</button>
+              <button class="pill" onclick="selectPill('s2_q42',this,'$60–$85/hr')" style="text-align:left;">$60–$85/hr</button>
+              <button class="pill" onclick="selectPill('s2_q42',this,'$85+/hr')" style="text-align:left;">$85+/hr</button>
+            </div>
+          </div>
+        </div>
+        <div class="q-block" style="margin-top:14px;margin-bottom:0;">
+          <label class="q-label">What does this process produce?</label>
+          <input type="text" id="s2_q43" oninput="onTextInput(this,'s2_q43')" />
+        </div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Have you ever tried to automate or improve any of these processes? If yes, what happened?</label>
+        <textarea id="s2_q44" rows="3" oninput="onTextInput(this,'s2_q44')"></textarea>
+      </div>
+
+      <!-- ── AI READINESS ── -->
+      <hr class="section-divider" />
+      <div class="section-divider-label">05 — AI Readiness</div>
+
+      <div class="q-block">
+        <label class="q-label">How does your leadership team generally feel about AI? <span class="req">*</span></label>
+        <div class="radio-group" id="radio-s2_q45">
+          <div class="radio-option" onclick="selectRadio('s2_q45',this,'Actively pushing for it')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Actively pushing for it</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q45',this,'Open but cautious')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Open but cautious</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q45',this,'Skeptical')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Skeptical</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q45',this,'Resistant')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Resistant</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q45',this,'We have not discussed it')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">We have not discussed it</span></div>
+        </div>
+        <div class="field-error" id="err-s2_q45">Please select an option.</div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Do you have anyone on your team who is naturally curious about technology and tends to adopt new tools before everyone else?</label>
+        <div class="radio-group" id="radio-s2_q46">
+          <div class="radio-option" onclick="selectRadio('s2_q46',this,'Yes, several people')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Yes, several people</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q46',this,'Yes, one or two')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Yes, one or two</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q46',this,'Not really')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Not really</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q46',this,'No')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">No</span></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Have any of your employees already started using AI tools on their own — with or without company approval?</label>
+        <div class="radio-group" id="radio-s2_q47">
+          <div class="radio-option" onclick="selectRadio('s2_q47',this,'Yes, many of them')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Yes, many of them</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q47',this,'Yes, a few')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Yes, a few</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q47',this,'Not that I know of')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Not that I know of</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q47',this,'No')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">No</span></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">What is your biggest concern about bringing AI into your operations?</label>
+        <div class="radio-group" id="radio-s2_q48">
+          <div class="radio-option" onclick="selectRadio('s2_q48',this,'Job displacement on my team')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Job displacement on my team</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q48',this,'Data security and privacy')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Data security and privacy</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q48',this,'Cost of implementation')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Cost of implementation</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q48',this,'Team adoption and training')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Team adoption and training</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q48',this,'Not sure where to start')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">Not sure where to start</span></div>
+          <div class="radio-option" onclick="selectRadio('s2_q48',this,'I do not have major concerns')"><div class="radio-circle"><div class="radio-dot"></div></div><span class="radio-label">I do not have major concerns</span></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Are there any compliance, data sensitivity, or regulatory requirements we need to be aware of?</label>
+        <div class="check-group" id="checks-s2_q49">
+          <div class="check-option" onclick="toggleCheck('s2_q49',this,'HIPAA')">
+            <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+            <span class="check-label">HIPAA</span>
+          </div>
+          <div class="check-option" onclick="toggleCheck('s2_q49',this,'Financial or PII data')">
+            <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+            <span class="check-label">Financial or PII data</span>
+          </div>
+          <div class="check-option" onclick="toggleCheck('s2_q49',this,'Government contracts')">
+            <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+            <span class="check-label">Government contracts</span>
+          </div>
+          <div class="check-option" onclick="toggleCheck('s2_q49',this,'None')">
+            <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+            <span class="check-label">None</span>
+          </div>
+          <div class="check-option" onclick="toggleCheck('s2_q49',this,'Other')">
+            <div class="check-box"><svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="#0E0F11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+            <span class="check-label">Other</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">What would need to be true six months from now for this engagement to be considered a massive success? <span class="req">*</span></label>
+        <textarea id="s2_q50" rows="3" oninput="onTextInput(this,'s2_q50')"></textarea>
+        <div class="field-error" id="err-s2_q50">This field is required.</div>
+      </div>
+
+      <!-- ── CONTACT ── -->
+      <hr class="section-divider" />
+      <div class="section-divider-label">06 — Contact & Scheduling</div>
+
+      <div class="q-block">
+        <label class="q-label">Full name <span class="req">*</span></label>
+        <input type="text" id="s2_q51" oninput="onTextInput(this,'s2_q51')" />
+        <div class="field-error" id="err-s2_q51">This field is required.</div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Best email address for your findings report <span class="req">*</span></label>
+        <input type="email" id="s2_q52" placeholder="you@yourcompany.com" oninput="onTextInput(this,'s2_q52')" />
+        <div class="field-error" id="err-s2_q52">Please enter a valid email address.</div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Phone number</label>
+        <input type="tel" id="s2_q53" placeholder="(555) 000-0000" oninput="onTextInput(this,'s2_q53')" />
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Best time for a follow-up call to walk through your results</label>
+        <input type="text" id="s2_q54" placeholder="Example: Weekday mornings, or Thursday afternoon" oninput="onTextInput(this,'s2_q54')" />
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Anything else you want us to know before we analyze your responses?</label>
+        <textarea id="s2_q55" rows="3" oninput="onTextInput(this,'s2_q55')"></textarea>
+      </div>
+
+      <button class="btn-primary" onclick="submitStage2()">Submit My Audit →</button>
+      <p class="form-footer-note">We will analyze your responses and deliver your custom AI savings report within 48 hours. Expect a personal email shortly.</p>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     STAGE 2 — THANK YOU
+════════════════════════════════════════ -->
+<div class="screen" id="screen-s2-ty">
+  <div class="card">
+    <div class="thank-you">
+      <div class="thank-you-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#C9963A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <path d="M22 4L12 14.01l-3-3"/>
+        </svg>
+      </div>
+      <div class="thank-you-title">You're all set.</div>
+      <p class="thank-you-body">We will analyze your responses and deliver your custom AI savings report within 48 hours. Expect a personal email from us shortly.</p>
+      <div class="thank-you-meta">Meridian · AI Workflow Intelligence</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ─── STATE ─── */
+  const formData = {};
+  const checkboxState = {};
+
+  /* ─── PROGRESS ─── */
+  function setProgress(pct) {
+    document.getElementById('progress-bar-fill').style.width = pct + '%';
+  }
+
+  /* ─── SCREEN SWITCH ─── */
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const screen = document.getElementById(id);
+    screen.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ─── TEXT INPUT ─── */
+  function onTextInput(el, key) {
+    formData[key] = el.value;
+    if (el.value.trim()) {
+      el.classList.add('filled');
+      el.classList.remove('error');
+      const err = document.getElementById('err-' + key);
+      if (err) { err.classList.remove('visible'); }
+    }
+  }
+
+  /* ─── PILL SELECT ─── */
+  function selectPill(key, btn, val) {
+    formData[key] = val;
+    const group = btn.closest('.pill-group') || document.getElementById('pills-' + key);
+    if (group) {
+      group.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+    }
+    btn.classList.add('selected');
+    const err = document.getElementById('err-' + key);
+    if (err) err.classList.remove('visible');
+  }
+
+  /* ─── RADIO SELECT ─── */
+  function selectRadio(key, el, val) {
+    formData[key] = val;
+    const group = document.getElementById('radio-' + key);
+    group.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    const err = document.getElementById('err-' + key);
+    if (err) err.classList.remove('visible');
+  }
+
+  /* ─── SCALE SELECT ─── */
+  function selectScale(key, btn, val) {
+    formData[key] = val;
+    const group = document.getElementById('scale-' + key);
+    group.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const err = document.getElementById('err-' + key);
+    if (err) err.classList.remove('visible');
+  }
+
+  /* ─── CHECKBOX TOGGLE ─── */
+  function toggleCheck(key, el, val) {
+    el.classList.toggle('selected');
+    if (!checkboxState[key]) checkboxState[key] = [];
+    const idx = checkboxState[key].indexOf(val);
+    if (idx === -1) { checkboxState[key].push(val); }
+    else { checkboxState[key].splice(idx, 1); }
+    formData[key] = checkboxState[key];
+  }
+
+  /* ─── DEPT SHOW/HIDE ─── */
+  function showDept(id) {
+    document.getElementById(id).classList.add('visible');
+  }
+  function hideDept(id) {
+    document.getElementById(id).classList.remove('visible');
+  }
+
+  /* ─── VALIDATE FIELD ─── */
+  function validateField(key, required) {
+    if (!required) return true;
+    const val = formData[key];
+    const el = document.getElementById(key);
+    const err = document.getElementById('err-' + key);
+    let valid = true;
+    if (!val || (typeof val === 'string' && !val.trim())) { valid = false; }
+    if (key === 's2_q52' && val) {
+      valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    }
+    if (!valid && err) {
+      err.classList.add('visible');
+      if (el) el.classList.add('error');
+    }
+    return valid;
+  }
+
+  /* ─── STAGE 1 SUBMIT ─── */
+  function submitStage1() {
+    let ok = true;
+    if (!validateField('s1_q1', true)) ok = false;
+    if (!formData['s1_q2']) { document.getElementById('err-s1_q2').classList.add('visible'); ok = false; }
+    if (!formData['s1_q3']) { document.getElementById('err-s1_q3').classList.add('visible'); ok = false; }
+    if (!validateField('s1_q4', true)) ok = false;
+    if (!formData['s1_q5']) { document.getElementById('err-s1_q5').classList.add('visible'); ok = false; }
+    if (!ok) {
+      document.querySelector('.screen.active').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    setProgress(10);
+
+    const payload = {
+      stage: 1,
+      s1_q1: formData['s1_q1'] || '',
+      s1_q2: formData['s1_q2'] || '',
+      s1_q3: formData['s1_q3'] || '',
+      s1_q4: formData['s1_q4'] || '',
+      s1_q5: formData['s1_q5'] || '',
+      submitted_at: new Date().toISOString()
+    };
+
+    fetch('YOUR_N8N_WEBHOOK_URL_HERE', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(() => {}); // silent fail — show thank you regardless
+
+    document.getElementById('header-stage-badge').textContent = 'Stage 1 Complete';
+    showScreen('screen-s1-ty');
+  }
+
+  /* ─── STAGE 2 SUBMIT ─── */
+  function submitStage2() {
+    let ok = true;
+    const required = ['s2_q1','s2_q3','s2_q4','s2_q5','s2_q6','s2_q7','s2_q26','s2_q27','s2_q28','s2_q29','s2_q50','s2_q51','s2_q52'];
+    required.forEach(k => { if (!validateField(k, true)) ok = false; });
+    if (!formData['s2_q2']) { document.getElementById('err-s2_q2').classList.add('visible'); ok = false; }
+    if (!formData['s2_q45']) { document.getElementById('err-s2_q45').classList.add('visible'); ok = false; }
+    if (!ok) return;
+    setProgress(100);
+
+    const payload = {
+      stage: 2,
+      stage1: {
+        s1_q1: formData['s1_q1'] || '',
+        s1_q2: formData['s1_q2'] || '',
+        s1_q3: formData['s1_q3'] || '',
+        s1_q4: formData['s1_q4'] || '',
+        s1_q5: formData['s1_q5'] || '',
+      },
+      business_snapshot: {
+        s2_q1: formData['s2_q1'] || '',
+        s2_q2: formData['s2_q2'] || '',
+        s2_q3: formData['s2_q3'] || '',
+      },
+      systems: {
+        s2_q4: formData['s2_q4'] || '',
+        s2_q5: formData['s2_q5'] || '',
+        s2_q6: formData['s2_q6'] || '',
+        s2_q7: formData['s2_q7'] || '',
+      },
+      departments: {
+        marketing: { active: formData['s2_q8']||'', owner: formData['s2_q9']||'', tasks: formData['s2_q10']||[] },
+        sales:     { active: formData['s2_q11']||'', owner: formData['s2_q12']||'', tasks: formData['s2_q13']||[] },
+        customer_service: { active: formData['s2_q14']||'', owner: formData['s2_q15']||'', tasks: formData['s2_q16']||[] },
+        operations: { active: formData['s2_q17']||'', owner: formData['s2_q18']||'', tasks: formData['s2_q19']||[] },
+        finance:   { active: formData['s2_q20']||'', owner: formData['s2_q21']||'', tasks: formData['s2_q22']||[] },
+        hr:        { active: formData['s2_q23']||'', owner: formData['s2_q24']||'', tasks: formData['s2_q25']||[] },
+      },
+      processes: {
+        process_1: { name: formData['s2_q26']||'', time_per_occurrence: formData['s2_q27']||'', times_per_week: formData['s2_q28']||'', people: formData['s2_q29']||'', hourly_cost: formData['s2_q30']||'', output: formData['s2_q31']||'' },
+        process_2: { name: formData['s2_q32']||'', time_per_occurrence: formData['s2_q33']||'', times_per_week: formData['s2_q34']||'', people: formData['s2_q35']||'', hourly_cost: formData['s2_q36']||'', output: formData['s2_q37']||'' },
+        process_3: { name: formData['s2_q38']||'', time_per_occurrence: formData['s2_q39']||'', times_per_week: formData['s2_q40']||'', people: formData['s2_q41']||'', hourly_cost: formData['s2_q42']||'', output: formData['s2_q43']||'' },
+        prior_attempts: formData['s2_q44']||'',
+      },
+      ai_readiness: {
+        leadership_sentiment: formData['s2_q45']||'',
+        early_adopters: formData['s2_q46']||'',
+        existing_ai_usage: formData['s2_q47']||'',
+        biggest_concern: formData['s2_q48']||'',
+        compliance_flags: formData['s2_q49']||[],
+        success_definition: formData['s2_q50']||'',
+      },
+      contact: {
+        name: formData['s2_q51']||'',
+        email: formData['s2_q52']||'',
+        phone: formData['s2_q53']||'',
+        best_time: formData['s2_q54']||'',
+        additional_notes: formData['s2_q55']||'',
+      },
+      submitted_at: new Date().toISOString()
+    };
+
+    fetch('YOUR_N8N_WEBHOOK_URL_HERE', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+
+    document.getElementById('header-stage-badge').textContent = 'Complete';
+    showScreen('screen-s2-ty');
+  }
+
+  /* ─── GO TO STAGE 2 ─── */
+  function goToStage2() {
+    document.getElementById('header-stage-badge').textContent = 'Stage 2 of 2';
+    setProgress(15);
+    showScreen('screen-s2');
+  }
+
+  /* ─── INIT ─── */
+  setProgress(5);
+</script>
+</body>
+</html>
