@@ -551,6 +551,19 @@
         <div class="field-error" id="err-s1_q5">Please select an option.</div>
       </div>
 
+      <!-- CONTACT -->
+      <div class="q-block">
+        <label class="q-label">Your name <span class="req">*</span></label>
+        <input type="text" id="s1_name" placeholder="First and last name" oninput="onTextInput(this,'s1_name')" />
+        <div class="field-error" id="err-s1_name">This field is required.</div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">Your email address <span class="req">*</span></label>
+        <input type="email" id="s1_email" placeholder="you@yourcompany.com" oninput="onTextInput(this,'s1_email')" />
+        <div class="field-error" id="err-s1_email">Please enter a valid email address.</div>
+      </div>
+
       <button class="btn-primary" onclick="submitStage1()">Submit — See If You Qualify →</button>
       <p class="form-footer-note">We review every submission personally. You'll hear from us within 24 hours.</p>
 
@@ -1332,6 +1345,8 @@
     if (!formData['s1_q3']) { document.getElementById('err-s1_q3').classList.add('visible'); ok = false; }
     if (!validateField('s1_q4', true)) ok = false;
     if (!formData['s1_q5']) { document.getElementById('err-s1_q5').classList.add('visible'); ok = false; }
+    if (!validateField('s1_name', true)) ok = false;
+    if (!validateField('s1_email', true)) ok = false;
     if (!ok) {
       document.querySelector('.screen.active').scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
@@ -1345,6 +1360,8 @@
       s1_q3: formData['s1_q3'] || '',
       s1_q4: formData['s1_q4'] || '',
       s1_q5: formData['s1_q5'] || '',
+      name: formData['s1_name'] || '',
+      email: formData['s1_email'] || '',
       submitted_at: new Date().toISOString()
     };
 
